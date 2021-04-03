@@ -34,7 +34,8 @@
 @(define ternary-table
 
 @Tabular[
-(("constant" "printed as" "predicate" "description" (list "is a " @nbr[trit?]) (list "also a " @nbr[bit?]))
+(("constant" "printed as" "predicate" "description" (list "is a " @nbr[trit?])
+             (list "also a " @nbr[bit?]))
  (@nbr[F] @nbr[F] @nbr[F?] "false, off, low" "yes" "yes")
  (@nbr[T] @nbr[T] @nbr[T?] "true, on, high"  "yes" "yes")
  (@nbr[?] @nbr[?] @nbr[??] "indeterminate"   "yes" "no"))
@@ -59,7 +60,7 @@ avoid hyperlinks where a text is relevant on the spot.
 @section[#:tag "introduction"]{Introduction}
 
 Digital circuits consist of @seclink["gate"]{gates} and @seclink["wires"]{wires}.
-Circuits are made by circuit constructors,@(lb)
+Circuits are made by circuit constructors,
 which them­selves can be made with syntax @racket[make-circuit-constr].
 @seclink["gate"]{Gates} are elementary circuits.
 Their constructors are provided by module @hyperlink["circuits.rkt"]{circuits.rkt}.
@@ -361,13 +362,13 @@ Optionally the results of the tests are printed in a table.
   (unless
    (or
     (and
-     (= clock-signal F)
-     (= new-state-signal old-state)
-     (= new-state-inverse-signal (Not-function old-state)))
+     (F? clock-signal)
+     (eq? new-state-signal old-state)
+     (eq? new-state-inverse-signal (Not-function old-state)))
     (and
-     (= clock-signal T)
-     (= new-state-signal in-signal)
-     (= new-state-inverse-signal (Not-function in-signal))))
+     (T? clock-signal)
+     (eq? new-state-signal in-signal)
+     (eq? new-state-inverse-signal (Not-function in-signal))))
    (error 'flip-flop "test fails"))
   (code:comment " ")
   (code:comment "If desired print results.")
@@ -468,7 +469,7 @@ More examples in section @seclink["More examples"]{More examples}.
 @nbr[(trit? obj)] yields @nbr[#t] if @nbr[obj] is a trit, id est @nbr[F], @nbr[T] or @nbr[?].@(lb)
 Else @nbr[(trit? obj)] yields @nbr[#f].@(lb)
 @nbr[(F? obj)] is the same as @nbr[(eq? obj F)].@(lb)
-@nbr[(T? obj)] is the same as @nbr[(eq? obj 'T)].@(lb)
+@nbr[(T? obj)] is the same as @nbr[(eq? obj T)].@(lb)
 @nbr[(?? obj)] is the same as @nbr[(eq? obj ?)].}
 
 @section[#:tag "binary"]{Binary logic}
@@ -719,6 +720,7 @@ Circuit constructors add actions to wires.
 @Interaction[
 (wire-make 'my-wire T)
 (object-name (wire-make 'another-wire))
+(code:comment "Two distinct wires with the same name.")
 (equal? (wire-make 'a) (wire-make 'a))]}
 
 @defparam[wire-init-signal signal trit? #:value ?]{
@@ -1386,13 +1388,13 @@ Let's test the full-adder:
  (printf " --> sum=~s, carry-out=~s, delay=~s~n"
   (wire-signal sum) (wire-signal cout) (sub1 (agenda-time)))
  (agenda-reset!)
- (define result (list (wire-signal sum) (wire-signal cout)))
+ (define result (format "~s ~s" (wire-signal sum) (wire-signal cout)))
  (unless
   (case (count T? (list a b c))
-   ((0) (equal? result '(0 0)))
-   ((1) (equal? result '(1 0)))
-   ((2) (equal? result '(0 1)))
-   ((3) (equal? result '(1 1))))
+   ((0) (equal? result "F F"))
+   ((1) (equal? result "T F"))
+   ((2) (equal? result "F T"))
+   ((3) (equal? result "T T")))
   (error 'full-adder "~s" (list a b c result))))]
 
 Full adders can be put in a row such as to make an adder for numbers
@@ -1445,14 +1447,14 @@ For this purpose we need conversion between numbers and lists of bits:
  (for/fold ((mask 1) (b '()) #:result b) ((i (in-range 6)))
   (values
    (arithmetic-shift mask 1)
-   (cons (if (zero? (bitwise-and mask n)) 0 1) b))))
+   (cons (if (zero? (bitwise-and mask n)) F T) b))))
 (code:comment " ")
 (define (bit-list->number b)
  (for/fold
   ((n 0) (k 1) #:result (if (> n 31) (- n 64) n))
   ((bit (in-list (reverse b))))
   (values
-   (if (zero? bit) n (+ n k))
+   (if (F? bit) n (+ n k))
    (arithmetic-shift k 1))))]
 
 Let's check @tt{number->bit-list} and @tt{bit-list->number}:
@@ -1487,11 +1489,11 @@ Now we can do the test on the 6-bit adder:
  (for ((b (in-list (list b5 b4 b3 b2 b1 b0)))
        (bit (in-list (number->bit-list m))))
       (agenda-schedule! b bit))
- (agenda-schedule! carry-in 0)
+ (agenda-schedule! carry-in F)
  (agenda-execute!)
  (cond
-  ((> (+ n m)  31) (= (wire-signal overflow) 1))
-  ((< (+ n m) -32) (= (wire-signal overflow) 1))
+  ((> (+ n m)  31) (T? (wire-signal overflow)))
+  ((< (+ n m) -32) (T? (wire-signal overflow)))
   (else
    (=
     (bit-list->number (map wire-signal (list s5 s4 s3 s2 s1 s0)))
@@ -1624,21 +1626,21 @@ the signals to flow through the first @nb{SR-flip-flop}.
  (agenda-reset!)
  (agenda-schedule! J     j)
  (agenda-schedule! K     k)
- (agenda-schedule! clock 1)
- (agenda-schedule! clock 0 10)
+ (agenda-schedule! clock T)
+ (agenda-schedule! clock F 10)
  (agenda-execute!))]
 
 @Interaction*[
 (define (action j k old-q)
- (case (list j k old-q)
-  (((0 0 0)) "no action")
-  (((0 1 0)) "reset (was already reset)")
-  (((1 0 0)) "set")
-  (((1 1 0)) "flip")
-  (((0 0 1)) "no action")
-  (((0 1 1)) "reset")
-  (((1 0 1)) "set (was already set)")
-  (((1 1 1)) "flip")))]
+ (case (format "~s ~s ~s" j k old-q)
+  (("F F F") "no action")
+  (("F T F") "reset (was already reset)")
+  (("T F F") "set")
+  (("T T F") "flip")
+  (("F F T") "no action")
+  (("F T T") "reset")
+  (("T F T") "set (was already set)")
+  (("T T T") "flip")))]
 
 Now the tests:
 
