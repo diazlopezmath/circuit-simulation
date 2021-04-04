@@ -101,16 +101,13 @@
       (generate-gates temps non-ids)))))))
 
 (define (make-hidden-wire wire-name)
+ (set! hidden-counter (add1 hidden-counter))
  (wire-make
-  (cond
-   ((to-be-hidden? wire-name)
-    (set! hidden-counter (add1 hidden-counter))
-    (string->symbol
-     (regexp-replace
-      #px"•[0 1 2 3 4 5 6 7 8 9]+$"
-      (symbol->string wire-name)
-      (format "•~s" hidden-counter))))
-   (else wire-name))))
+  (string->symbol
+   (regexp-replace
+    #px"•[0 1 2 3 4 5 6 7 8 9]+$"
+    (symbol->string wire-name)
+    (format "•~s" hidden-counter)))))
 
 (define-for-syntax (rename-hidden temps sub-ins)
  (cond
@@ -119,7 +116,6 @@
   (else #`(#,(car temps) #,@(rename-hidden (cdr temps) (cdr sub-ins))))))
 
 (define hidden-counter 0)
-(define (to-be-hidden? name) (regexp-match? #px".*•[0 1 2 3 4 5 6 7 8 9]+$" (symbol->string name)))
 (define (reset-hidden-cntr!) (set! hidden-counter 0))
 
 (define-for-syntax (generate-gates temps non-ids)
