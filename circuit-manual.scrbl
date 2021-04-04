@@ -433,6 +433,7 @@ We can use the latch as a subcircuit in a D-flip-flop:
   (code:comment "gates:")
   ((state)         (Nand S-inverse state-inverse))
   ((state-inverse) (Nand R-inverse state))))
+  (code:line)
 (define make-D-flip-flop-with-inversed-SR-latch
  (make-circuit-constr 'D-flip-flop-with-inversed-SR-latch
   (in clock)            (code:comment "inputs")
@@ -441,11 +442,13 @@ We can use the latch as a subcircuit in a D-flip-flop:
   ((S-inverse) (Nand clock in))
   ((R-inverse) (Nand clock S-inverse))
   ((state state-inverse) (make-inverted-SR-latch S-inverse R-inverse))))
+  (code:line)
 (make-D-flip-flop-with-inversed-SR-latch
  in-wire
  clock-wire
  state-wire
  state-inverse-wire)
+(code:line)
 (test-and-tabulate make-D-flip-flop-with-inversed-SR-latch #f)]
 @(reset-Interaction*)
 
@@ -470,7 +473,10 @@ More examples in section @seclink["More examples"]{More examples}.
 Else @nbr[(trit? obj)] yields @nbr[#f].@(lb)
 @nbr[(F? obj)] is the same as @nbr[(eq? obj F)].@(lb)
 @nbr[(T? obj)] is the same as @nbr[(eq? obj T)].@(lb)
-@nbr[(?? obj)] is the same as @nbr[(eq? obj ?)].}
+@nbr[(?? obj)] is the same as @nbr[(eq? obj ?)].
+
+Predicate @nbr[eq?] can be used because there always is
+only one instance of @nbr[F], only one instance of @nbr[T] and only one instance of @nbr[?].}
 
 @section[#:tag "binary"]{Binary logic}
 
