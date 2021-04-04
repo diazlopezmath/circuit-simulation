@@ -1155,69 +1155,40 @@ Same as
 @nbr[(Or-function (Not-function premise) implication)]@(lb)
 Corresponds to an @nbr[Imply] gate.}
 
-@ignore{@section{Logical functions}
-
-A logical function has zero, one or more trits for its inputs and returns a trit.Y
-
-@defproc[(Not-function (input trit?)) trit?]{
-@nbr[(Not-function F)] → @nbr[T]@(lb)
-@nbr[(Not-function T)] → @nbr[F]@(lb)
-@nbr[(Not-function ?)] → @nbr[?]}
-
-@defproc[(And-function (input trit?) ...) trit?]{
-Yields @nbr[T] if all @nbr[input]s are @nbr[T] or if there are no @nbr[input]s.@(lb)
-Yields @nbr[F] if at least one @nbr[input] is @nbr[F].@(lb)
-Else yields @nbr[?].}
-
-@defproc[(Nand-function (input trit?) ...) trit?]{
-Yields @nbr[F] if all @nbr[input]s are @nbr[T] or if there are no @nbr[input]s.@(lb)
-Yields @nbr[T] if at least one @nbr[input] is @nbr[F].@(lb)
-Else yields @nbr[?].}
-
-@defproc[(Or-function(input trit?) ...) trit?]{
-Yields @nbr[F] if all @nbr[input]s are @nbr[F] or if there are no @nbr[input]s.@(lb)
-Yields @nbr[T] if at least one @nbr[input] is @nbr[T].@(lb)
-Else yields @nbr[?].}
-
-@defproc[(Nor-function(input trit?) ...) trit?]{
-Yields @nbr[T] if all @nbr[input]s are @nbr[F] or if there are no @nbr[input]s.@(lb)
-Yields @nbr[F] if at least one @nbr[input] is @nbr[T].@(lb)
-Else yields @nbr[?].}
-
-@defproc[(Xor-function (input trit?) ...) trit?]{
-Yields @nbr[F] cq @nbr[T] if all @nbr[input]s are determinate and an even cq odd number of them is
-@nbr[T].@(lb)
-Yields @nbr[?] if at least one @nbr[input] is @nbr[?].}
-
-@defproc[(Imply-function (premise trit?) (implication trit?)) trit?]{
-Same as @nbr[(Or-function (Not-function premise) implication)].}
- 
-@defproc[(If-function (test trit?) (then trit?) (else trit?)) trit?]{
-Yields @nbr[then] if @nbr[(eq? then else)].@(lb)
-Yields @nbr[then] if @nbr[test] is @nbr[T].@(lb)
-Yields @nbr[else] if @nbr[test] is @nbr[F].@(lb)
-Else yields @nbr[?].}
-
 @defproc[
 ((make-gate*-constr (name symbol?) (function (-> trit? ... trit?))) (delay exact-positive-integer?))
 circuit-constr?]{
 Yields a gate constructor that accepts as many inputs as the @nbr[function] accepts trits,
 possibly a variable number of them.
 Such constructors cannot be made with syntax @nbr[make-circuit-constr].
-The gate has one output with a delay of @nbr[delay] units of time.
+The gate has one output with a delay of @nbr[delay] units of time.}
+
+@deftogether[
+(@defproc[(trit-combinations (n natural?) (sort? any/c #f)) (listof (listof trit?))]
+ @defproc[(bit-combinations (n natural?)) (listof (listof bit?))])]{
+Procedure @nbr[trit-combinations] returns a list of all combinations of @nbr[n] trits.
+The result is a list of 3@↑{n} lists of @nbr[n] trits. If @nbr[sort?] has a true value,
+combinations with determinate trits (bits) only preceed all other ones.
+Procedure @nbr[bit-combinations] returns a list of all combinations of @nbr[n] bits.
+The result is a list of 2@↑{n} lists of @nbr[n] bits.
 
 @Interaction[
-(define Xor* ((make-gate*-constr 'Xor* Xor-function) 5))
-(define (run-Xor* nr-of-inputs)
- (printf "Nr of inputs: ~s: " nr-of-inputs)
- (agenda-reset!)
- (define output-wire (wire-make 'out))
- (define input-wires
-  (build-list nr-of-inputs (λ (i) (wire-make 'in T))))
- (apply Xor* (append input-wires (list output-wire)))
+(trit-combinations 2 #f)
+(trit-combinations 2 #t)
+(bit-combinations 3)]
+
+The combinations can be used to check a circuit for all feasible inputs@(lb)
+or for making a truth table:
+
+@Interaction[
+(define out (wire-make 'out))
+(for ((combination (in-list (trit-combinations 2 #t))))
+ (apply And
+  (append
+   (map (curry wire-make 'no-name) combination)
+   (list out)))
  (agenda-execute!)
- (wire-println output-wire))
-(for ((n (in-range 5))) (run-Xor* n))]}}
+ (printf "in=~s " combination) (wire-println out))]}
 
 @section[#:tag "truth tables"]{Truth tables}
 
@@ -1541,10 +1512,10 @@ The state transition table for an SR-flip-flop after a @nbr[T] pulse on the @tt{
 
 @inset{@Tabular[
 (((tt "S") (tt "R") (tt "Q") (tt "P") (list "new "(tt "Q")) (list "new "(tt "P")) "Action/warning")
- ((tt "0") (tt "0") (tt "Q") (tt "P") (tt "Q") (tt "P") "State preserved")
- ((tt "0") (tt "1") (tt " ") (tt " ") (tt "0") (tt "1") "Reset")
- ((tt "1") (tt "0") (tt " ") (tt " ") (tt "1") (tt "0") "Set")
- ((red (tt "1")) (red (tt "1")) " " 'cont 'cont 'cont @red{Do not clock this}))
+ ((tt "F") (tt "F") (tt "Q") (tt "P") (tt "Q") (tt "P") "State preserved")
+ ((tt "F") (tt "T") (tt " ") (tt " ") (tt "F") (tt "T") "Reset")
+ ((tt "T") (tt "F") (tt " ") (tt " ") (tt "T") (tt "F") "Set")
+ ((red (tt "T")) (red (tt "T")) " " 'cont 'cont 'cont @red{Do not clock this}))
  #:row-properties '((top-border bottom-border) () () () bottom-border)
  #:column-properties '(()()()() center center left)
  #:sep (hspace 2)]}
@@ -1556,10 +1527,10 @@ The state transition table for a twin-flip-flop after a @nbr[T] pulse on the
 
 @inset{@Tabular[
 (((tt "J") (tt "K") (tt "Q") (tt "P") (list "new "(tt "Q")) (list "new "(tt "P")) "Action")
- ((tt "0") (tt "0") (tt "Q") (tt "P") (tt "Q") (tt "P") "No change (provided already stable)")
- ((tt "0") (tt "1") (tt " ") (tt " ") (tt "0") (tt "1") "Reset")
- ((tt "1") (tt "0") (tt " ") (tt " ") (tt "1") (tt "0") "Set")
- ((tt "1") (tt "1") (tt "Q") (tt "P") (tt "P") (tt "Q") "Flip (provided already stable)"))
+ ((tt "F") (tt "F") (tt "Q") (tt "P") (tt "Q") (tt "P") "No change (provided already stable)")
+ ((tt "F") (tt "T") (tt " ") (tt " ") (tt "F") (tt "T") "Reset")
+ ((tt "T") (tt "F") (tt " ") (tt " ") (tt "T") (tt "F") "Set")
+ ((tt "T") (tt "T") (tt "Q") (tt "P") (tt "P") (tt "Q") "Flip (provided already stable)"))
  #:row-properties '((top-border bottom-border) () () () bottom-border)
  #:column-properties '(()()()() 'center 'center 'left)
  #:sep (hspace 2)]}
@@ -1661,7 +1632,7 @@ Now the tests:
  (printf
   "J=~s, K=~s, old-Q=~s --> ~a, ~a~n"
   j k old-q
-  (wire-println #:port 'string #:sep ", " P Q)
+  (wire-println #:port 'string #:sep ", " Q P)
   (action j k old-q)))]
 
 @(reset-Interaction*)
